@@ -26,12 +26,13 @@
     background: var(--bg);
     color: var(--text);
     overflow-x: hidden;
+    transition: background-color 0.4s ease;
   }
   #bg-canvas { position: fixed; inset: 0; z-index: 0; }
-  .glow { position: fixed; z-index: 0; border-radius: 50%; filter: blur(120px); opacity: 0.35; pointer-events: none; }
+  .glow { position: fixed; z-index: 0; border-radius: 50%; filter: blur(120px); opacity: var(--glow-opacity, 0.35); pointer-events: none; transition: background 0.5s ease; }
   .glow-1 { width: 500px; height: 500px; background: #1f6feb; top: -150px; left: -100px; animation: float1 18s ease-in-out infinite; }
   .glow-2 { width: 450px; height: 450px; background: #8957e5; bottom: -150px; right: -100px; animation: float2 22s ease-in-out infinite; }
-  .glow-3 { width: 350px; height: 350px; background: #238636; top: 40%; left: 60%; animation: float1 25s ease-in-out infinite reverse; opacity: 0.2; }
+  .glow-3 { width: 350px; height: 350px; background: #238636; top: 40%; left: 60%; animation: float1 25s ease-in-out infinite reverse; opacity: calc(var(--glow-opacity, 0.35) * 0.55); }
   @keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,40px)} }
   @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-50px,-40px)} }
   .container {
@@ -205,6 +206,42 @@
   .btn:hover { background: var(--hover); }
   .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-color: transparent; color: #fff; }
   .btn.primary:hover { opacity: 0.9; }
+  .theme-fab {
+    position: fixed; bottom: 24px; right: 24px; z-index: 40;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; cursor: pointer; color: #fff;
+    display: grid; place-items: center;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .theme-fab:hover { transform: scale(1.08) rotate(12deg); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  .theme-panel {
+    position: fixed; bottom: 84px; right: 24px; z-index: 40;
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 16px; padding: 16px; width: 268px;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 10px 44px rgba(0,0,0,0.45);
+    opacity: 0; visibility: hidden; transform: translateY(12px) scale(0.96);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  }
+  .theme-panel.open { opacity: 1; visibility: visible; transform: none; }
+  .theme-panel-title {
+    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); margin-bottom: 12px; font-weight: 600;
+  }
+  .theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .theme-item {
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    padding: 10px 6px; border-radius: 10px; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.15s ease;
+  }
+  .theme-item:hover { background: var(--hover); }
+  .theme-item.active { border-color: var(--accent); background: var(--hover); }
+  .theme-swatch {
+    width: 100%; height: 32px; border-radius: 8px;
+  }
+  .theme-name { font-size: 0.72rem; color: var(--text); }
   @media (max-width: 560px) {
     .quick-grid { grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); }
     .tools-grid { grid-template-columns: 1fr; }
@@ -289,6 +326,14 @@
   </div>
 </div>
 
+<button class="theme-fab" id="theme-fab" title="Cambiar tema" aria-label="Cambiar tema">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+</button>
+<div class="theme-panel" id="theme-panel">
+  <div class="theme-panel-title">Temas</div>
+  <div class="theme-grid" id="theme-grid"></div>
+</div>
+
 <script>
 const clockEl = document.getElementById('clock');
 const dateEl = document.getElementById('date');
@@ -347,6 +392,112 @@ document.addEventListener('keydown', ev => {
     searchInput.select();
   }
 });
+
+const THEMES = {
+  cosmos: {
+    name: 'Cosmos',
+    vars: { bg: '#0d1117', panel: 'rgba(22,27,34,0.75)', panelBorder: 'rgba(88,166,255,0.15)', text: '#e6edf3', muted: '#8b949e', accent: '#58a6ff', accent2: '#bc8cff', accent3: '#3fb950', danger: '#f85149', inputBg: 'rgba(22,27,34,0.9)', hover: 'rgba(88,166,255,0.12)', glowOpacity: 0.35 },
+    glows: ['#1f6feb', '#8957e5', '#238636'],
+    particle: '88,166,255'
+  },
+  neon: {
+    name: 'Neon',
+    vars: { bg: '#08060f', panel: 'rgba(18,14,32,0.75)', panelBorder: 'rgba(0,240,255,0.18)', text: '#eae6ff', muted: '#8a83b0', accent: '#00f0ff', accent2: '#ff2fd6', accent3: '#7cff6b', danger: '#ff4d6d', inputBg: 'rgba(18,14,32,0.9)', hover: 'rgba(0,240,255,0.12)', glowOpacity: 0.4 },
+    glows: ['#00f0ff', '#ff2fd6', '#7cff6b'],
+    particle: '0,240,255'
+  },
+  emerald: {
+    name: 'Emerald',
+    vars: { bg: '#07110c', panel: 'rgba(12,26,18,0.75)', panelBorder: 'rgba(52,211,153,0.16)', text: '#e3f5ec', muted: '#7fae97', accent: '#34d399', accent2: '#22d3ee', accent3: '#a3e635', danger: '#f87171', inputBg: 'rgba(12,26,18,0.9)', hover: 'rgba(52,211,153,0.12)', glowOpacity: 0.32 },
+    glows: ['#059669', '#0891b2', '#65a30d'],
+    particle: '52,211,153'
+  },
+  crimson: {
+    name: 'Crimson',
+    vars: { bg: '#12070a', panel: 'rgba(28,12,16,0.75)', panelBorder: 'rgba(248,113,113,0.16)', text: '#fbe6e9', muted: '#b08288', accent: '#f87171', accent2: '#fb923c', accent3: '#fbbf24', danger: '#ef4444', inputBg: 'rgba(28,12,16,0.9)', hover: 'rgba(248,113,113,0.12)', glowOpacity: 0.34 },
+    glows: ['#dc2626', '#ea580c', '#b45309'],
+    particle: '248,113,113'
+  },
+  sunset: {
+    name: 'Sunset',
+    vars: { bg: '#150a08', panel: 'rgba(30,16,12,0.75)', panelBorder: 'rgba(251,146,60,0.16)', text: '#fceee3', muted: '#b58a72', accent: '#fb923c', accent2: '#f472b6', accent3: '#facc15', danger: '#f87171', inputBg: 'rgba(30,16,12,0.9)', hover: 'rgba(251,146,60,0.12)', glowOpacity: 0.34 },
+    glows: ['#f97316', '#ec4899', '#eab308'],
+    particle: '251,146,60'
+  },
+  amethyst: {
+    name: 'Amethyst',
+    vars: { bg: '#0f0816', panel: 'rgba(24,14,36,0.75)', panelBorder: 'rgba(168,120,255,0.16)', text: '#efe6ff', muted: '#9c86be', accent: '#a878ff', accent2: '#e879f9', accent3: '#60a5fa', danger: '#fb7185', inputBg: 'rgba(24,14,36,0.9)', hover: 'rgba(168,120,255,0.12)', glowOpacity: 0.36 },
+    glows: ['#7c3aed', '#c026d3', '#2563eb'],
+    particle: '168,120,255'
+  },
+  aurora: {
+    name: 'Aurora',
+    vars: { bg: '#061016', panel: 'rgba(10,24,32,0.75)', panelBorder: 'rgba(45,212,191,0.16)', text: '#dff5f1', muted: '#75a89f', accent: '#2dd4bf', accent2: '#38bdf8', accent3: '#a78bfa', danger: '#fb7185', inputBg: 'rgba(10,24,32,0.9)', hover: 'rgba(45,212,191,0.12)', glowOpacity: 0.32 },
+    glows: ['#14b8a6', '#0ea5e9', '#8b5cf6'],
+    particle: '45,212,191'
+  },
+  slate: {
+    name: 'Slate',
+    vars: { bg: '#0b0e13', panel: 'rgba(20,24,30,0.78)', panelBorder: 'rgba(148,163,184,0.16)', text: '#e2e8f0', muted: '#94a3b8', accent: '#94a3b8', accent2: '#cbd5e1', accent3: '#64748b', danger: '#f87171', inputBg: 'rgba(20,24,30,0.9)', hover: 'rgba(148,163,184,0.12)', glowOpacity: 0.28 },
+    glows: ['#475569', '#334155', '#1e293b'],
+    particle: '148,163,184'
+  },
+  light: {
+    name: 'Light',
+    vars: { bg: '#f2f5f9', panel: 'rgba(255,255,255,0.82)', panelBorder: 'rgba(15,23,42,0.08)', text: '#182230', muted: '#64748b', accent: '#2563eb', accent2: '#9333ea', accent3: '#16a34a', danger: '#dc2626', inputBg: 'rgba(255,255,255,0.92)', hover: 'rgba(37,99,235,0.08)', glowOpacity: 0.3 },
+    glows: ['#93c5fd', '#d8b4fe', '#86efac'],
+    particle: '100,130,200'
+  }
+};
+let particleRGB = '88,166,255';
+function applyTheme(key) {
+  const t = THEMES[key] || THEMES.cosmos;
+  const r = document.documentElement.style;
+  r.setProperty('--bg', t.vars.bg);
+  r.setProperty('--panel', t.vars.panel);
+  r.setProperty('--panel-border', t.vars.panelBorder);
+  r.setProperty('--text', t.vars.text);
+  r.setProperty('--muted', t.vars.muted);
+  r.setProperty('--accent', t.vars.accent);
+  r.setProperty('--accent2', t.vars.accent2);
+  r.setProperty('--accent3', t.vars.accent3);
+  r.setProperty('--danger', t.vars.danger);
+  r.setProperty('--input-bg', t.vars.inputBg);
+  r.setProperty('--hover', t.vars.hover);
+  r.setProperty('--glow-opacity', t.vars.glowOpacity);
+  document.querySelector('.glow-1').style.background = t.glows[0];
+  document.querySelector('.glow-2').style.background = t.glows[1];
+  document.querySelector('.glow-3').style.background = t.glows[2];
+  particleRGB = t.particle;
+  localStorage.setItem('ff_theme', key);
+  document.querySelectorAll('.theme-item').forEach(el => el.classList.toggle('active', el.dataset.key === key));
+}
+const themeGrid = document.getElementById('theme-grid');
+Object.entries(THEMES).forEach(([key, t]) => {
+  const item = document.createElement('div');
+  item.className = 'theme-item';
+  item.dataset.key = key;
+  const sw = document.createElement('div');
+  sw.className = 'theme-swatch';
+  sw.style.background = 'linear-gradient(135deg, ' + t.vars.accent + ', ' + t.vars.accent2 + ')';
+  sw.style.boxShadow = 'inset 0 0 0 2px ' + t.vars.bg;
+  const nm = document.createElement('div');
+  nm.className = 'theme-name';
+  nm.textContent = t.name;
+  item.append(sw, nm);
+  item.onclick = () => applyTheme(key);
+  themeGrid.appendChild(item);
+});
+const themeFab = document.getElementById('theme-fab');
+const themePanel = document.getElementById('theme-panel');
+themeFab.onclick = ev => { ev.stopPropagation(); themePanel.classList.toggle('open'); };
+document.addEventListener('click', ev => {
+  if (!themePanel.contains(ev.target) && ev.target !== themeFab) themePanel.classList.remove('open');
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape') themePanel.classList.remove('open');
+});
+applyTheme(localStorage.getItem('ff_theme') || 'cosmos');
 
 const DEFAULT_LINKS = [
   { name: 'GitHub', url: 'https://github.com' },
@@ -663,7 +814,7 @@ function draw() {
     if (p.y < 0 || p.y > H) p.vy *= -1;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(88,166,255,0.35)';
+    ctx.fillStyle = 'rgba(' + particleRGB + ',0.35)';
     ctx.fill();
     for (let j = i + 1; j < particles.length; j++) {
       const q = particles[j];
@@ -672,7 +823,7 @@ function draw() {
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(q.x, q.y);
-        ctx.strokeStyle = 'rgba(88,166,255,' + (0.12 * (1 - d / 130)) + ')';
+        ctx.strokeStyle = 'rgba(' + particleRGB + ',' + (0.12 * (1 - d / 130)) + ')';
         ctx.lineWidth = 1;
         ctx.stroke();
       }
