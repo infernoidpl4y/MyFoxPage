@@ -383,7 +383,7 @@ if ($api === 'reset') {
 
   <div class="section">
     <div class="section-head">
-      <span class="dot" style="background:var(--accent3)"></span> Bug Bounty · Tools
+      <span class="dot" style="background:var(--accent3)"></span> My Tools
       <button class="head-btn" id="tools-reset" title="Restaurar categorías por defecto">↺</button>
     </div>
     <div class="tools-grid" id="tools-grid"></div>
